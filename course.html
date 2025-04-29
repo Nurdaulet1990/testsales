@@ -18,83 +18,78 @@
     #videoContainer {
       position: relative;
     }
-    .video-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      z-index: 10;
+    #troubleshooting {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      display: none;
     }
   </style>
 </head>
-<body oncontextmenu="return false">
+<body>
   <div class="course-container">
     <h2>欢迎回来！</h2>
     <div class="no-share-notice">⚠️ 根据平台规定，禁止分享或传播视频链接。视频仅限于本页面观看。</div>
     <div id="videoContainer"></div>
     <p id="privateVideoNote" style="color: #666; font-style: italic;">注意：这是一个私人视频，您需要授权才能查看。</p>
+    <div id="troubleshooting">
+      <p><strong>视频无法播放？</strong></p>
+      <ul>
+        <li>请确保您已登录</li>
+        <li>请确保您的网络连接稳定</li>
+        <li>如果视频仍然无法播放，请点击 <button onclick="reloadVideo()">重新加载视频</button></li>
+      </ul>
+    </div>
     <button onclick="logout()">退出登录</button>
   </div>
   <script>
-    // Disable right-click
-    document.addEventListener('contextmenu', event => event.preventDefault());
-    
-    // Disable keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-      // Disable Ctrl+S, Ctrl+U, F12
-      if (
-        (e.ctrlKey && (e.keyCode === 83 || e.keyCode === 85)) || 
-        e.keyCode === 123
-      ) {
-        e.preventDefault();
-        return false;
-      }
-    });
-
     if (!localStorage.getItem("loggedInToday")) {
       window.location.href = "index.html";
     } else {
+      loadVideo();
+    }
+
+    function loadVideo() {
+      // Clear previous video if any
+      document.getElementById("videoContainer").innerHTML = "";
+      
       // Create the iframe with the video
       const iframe = document.createElement("iframe");
       iframe.width = "560";
       iframe.height = "315";
       
-      // Generate a unique session token to help prevent direct access
-      const sessionToken = Math.random().toString(36).substring(2, 15);
-      localStorage.setItem("videoSessionToken", sessionToken);
-      
-      // Append a random query parameter to make it harder to copy the link
-      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w?rel=0&modestbranding=1&session=" + sessionToken;
+      // Use a simpler YouTube embed URL with minimal parameters
+      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w";
       iframe.frameBorder = "0";
       iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
       iframe.allowFullscreen = true;
+      
       iframe.onload = function() {
         console.log("Video loaded");
       };
+      
       iframe.onerror = function() {
         document.getElementById("privateVideoNote").innerHTML += " <strong>无法加载视频。请确保您有权限观看此私人视频。</strong>";
+        document.getElementById("troubleshooting").style.display = "block";
       };
-      document.getElementById("videoContainer").appendChild(iframe);
       
-      // Add a transparent overlay to make it harder to right-click on the video
-      const overlay = document.createElement("div");
-      overlay.className = "video-overlay";
-      overlay.addEventListener("contextmenu", e => e.preventDefault());
-      document.getElementById("videoContainer").appendChild(overlay);
-      
-      // Check if this is a valid session
-      setInterval(function() {
-        if (localStorage.getItem("videoSessionToken") !== sessionToken) {
-          window.location.href = "index.html";
+      // Show troubleshooting section after a delay if needed
+      setTimeout(function() {
+        if (document.getElementById("videoContainer").querySelector("iframe").contentDocument === null) {
+          document.getElementById("troubleshooting").style.display = "block";
         }
       }, 5000);
+      
+      document.getElementById("videoContainer").appendChild(iframe);
+    }
+    
+    function reloadVideo() {
+      loadVideo();
     }
 
     function logout() {
       localStorage.removeItem("loggedInToday");
-      localStorage.removeItem("videoSessionToken");
       window.location.href = "index.html";
     }
   </script>
