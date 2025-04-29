@@ -7,7 +7,7 @@
   <style>
     #videoContainer {
       position: relative;
-      pointer-events: none; /* Prevents most direct interactions with the iframe */
+      /* Removed pointer-events: none to allow video interaction */
     }
     .copyright-overlay {
       position: absolute;
@@ -30,57 +30,81 @@
       background-color: #fadbd8;
       border-radius: 4px;
     }
+    .error-message {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+      display: none;
+    }
+    .direct-link {
+      margin-top: 10px;
+      display: none;
+    }
   </style>
 </head>
-<body oncontextmenu="return false">
+<body>
   <div class="course-container">
     <h2>欢迎回来！</h2>
     <div id="videoContainer">
       <!-- Copyright overlay will be added here -->
     </div>
+    <p id="errorMessage" class="error-message">无法加载视频，请点击下方链接直接在YouTube上观看：</p>
+    <a id="directLink" class="direct-link" href="https://www.youtube.com/watch?v=LBNQlV3yk3w" target="_blank">在YouTube上观看视频</a>
     <p class="no-sharing-warning">严禁分享：本视频内容受版权保护，严禁分享链接或录制视频内容。违者将承担法律责任。</p>
     <p id="privateVideoNote" style="color: #666; font-style: italic;">注意：这是一个私人视频，您需要授权才能查看。</p>
     <button onclick="logout()">退出登录</button>
   </div>
   <script>
-    // Disable keyboard shortcuts
+    // Allow basic keyboard functionality but still prevent copying 
     document.addEventListener('keydown', function(e) {
-      // Disable common keyboard shortcuts
       if ((e.ctrlKey || e.metaKey) && 
-          (e.key === 'c' || e.key === 's' || e.key === 'u' || 
-           e.key === 'p' || e.key === 'a' || e.key === 'e')) {
+          (e.key === 'c' || e.key === 's')) {
         e.preventDefault();
         return false;
       }
     });
-
-    // Disable text selection
-    document.onselectstart = function() { return false; };
     
     if (!localStorage.getItem("loggedInToday")) {
       window.location.href = "index.html";
     } else {
       const videoContainer = document.getElementById("videoContainer");
+      const errorMessage = document.getElementById("errorMessage");
+      const directLink = document.getElementById("directLink");
       
       // Create overlay with copyright notice
       const overlay = document.createElement("div");
       overlay.className = "copyright-overlay";
       overlay.textContent = "© 版权所有 - 禁止分享";
       
+      // Create and add iframe with YouTube video
       const iframe = document.createElement("iframe");
       iframe.width = "560";
       iframe.height = "315";
-      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w?rel=0&modestbranding=1&controls=0";
+      // Using standard YouTube embed with controls enabled
+      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w";
       iframe.frameBorder = "0";
-      iframe.allow = "accelerometer; encrypted-media; gyroscope; picture-in-picture";
-      iframe.allowFullscreen = false;
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      
       iframe.onload = function() {
         console.log("Video loaded");
         videoContainer.appendChild(overlay);
       };
+      
       iframe.onerror = function() {
-        document.getElementById("privateVideoNote").innerHTML += " <strong>无法加载视频。请确保您有权限观看此私人视频。</strong>";
+        console.error("Error loading video");
+        errorMessage.style.display = "block";
+        directLink.style.display = "block";
       };
+      
+      // Add error handling in case iframe fails to load
+      setTimeout(function() {
+        if (!iframe.contentWindow || !iframe.contentWindow.document) {
+          errorMessage.style.display = "block";
+          directLink.style.display = "block";
+        }
+      }, 3000);
+      
       videoContainer.appendChild(iframe);
       
       // Add unique user identifier watermark
@@ -96,17 +120,12 @@
       window.location.href = "index.html";
     }
     
-    // Prevent drag and drop
-    document.addEventListener('dragstart', function(e) {
-      e.preventDefault();
-      return false;
-    });
-    
-    // Disable copy functionality
-    document.addEventListener('copy', function(e) {
-      e.preventDefault();
-      return false;
-    });
+    // Provide a fallback for video display issues
+    window.addEventListener('error', function(e) {
+      console.error('Error event:', e.message);
+      document.getElementById("errorMessage").style.display = "block";
+      document.getElementById("directLink").style.display = "block";
+    }, true);
   </script>
 </body>
 </html>
