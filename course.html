@@ -9,6 +9,7 @@
   <div class="course-container">
     <h2>欢迎回来！</h2>
     <div id="videoContainer"></div>
+    <p id="privateVideoNote" style="color: #666; font-style: italic;">注意：这是一个私人视频，您需要授权才能查看。</p>
     <button onclick="logout()">退出登录</button>
   </div>
   <script>
@@ -22,6 +23,12 @@
       iframe.frameBorder = "0";
       iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
       iframe.allowFullscreen = true;
+      iframe.onload = function() {
+        console.log("Video loaded");
+      };
+      iframe.onerror = function() {
+        document.getElementById("privateVideoNote").innerHTML += " <strong>无法加载视频。请确保您有权限观看此私人视频。</strong>";
+      };
       document.getElementById("videoContainer").appendChild(iframe);
     }
 
