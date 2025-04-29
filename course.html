@@ -5,116 +5,96 @@
   <title>课程页面</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .course-container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-      text-align: center;
-    }
-    .video-options {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      margin: 20px 0;
-    }
-    .option-box {
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 5px;
-      background-color: #f9f9f9;
-    }
-    .option-box h3 {
-      margin-top: 0;
-    }
-    .warning {
-      color: #e74c3c;
-      font-weight: bold;
-      margin: 10px 0;
+    .no-share-notice {
+      background-color: #ffeeee;
+      border: 1px solid #ffcccc;
+      color: #cc0000;
       padding: 10px;
-      border: 1px solid #e74c3c;
-      background-color: #fadbd8;
-      border-radius: 4px;
-    }
-    button {
-      padding: 10px 20px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
+      margin: 10px 0;
+      font-weight: bold;
+      text-align: center;
       border-radius: 5px;
-      cursor: pointer;
-      margin-top: 20px;
     }
-    button:hover {
-      background-color: #45a049;
+    #videoContainer {
+      position: relative;
+    }
+    .video-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 10;
     }
   </style>
 </head>
-<body>
+<body oncontextmenu="return false">
   <div class="course-container">
     <h2>欢迎回来！</h2>
-    
-    <div class="warning">
-      注意：这是一个私人视频。请选择以下任一方式观看视频。
-    </div>
-    
-    <div class="video-options">
-      <div class="option-box">
-        <h3>选项 1: 标准 YouTube 嵌入</h3>
-        <iframe id="youtubeEmbed" width="560" height="315" src="https://www.youtube.com/embed/LBNQlV3yk3w" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-      </div>
-      
-      <div class="option-box">
-        <h3>选项 2: 普通 YouTube 链接</h3>
-        <p>如果上面的视频无法加载，请点击下面的链接直接在 YouTube 上观看:</p>
-        <a href="https://www.youtube.com/watch?v=LBNQlV3yk3w" target="_blank">
-          <button type="button">在 YouTube 上观看</button>
-        </a>
-      </div>
-      
-      <div class="option-box">
-        <h3>选项 3: 备用嵌入方式</h3>
-        <div id="alternativeEmbed">
-          <!-- Will be filled by JavaScript -->
-        </div>
-      </div>
-    </div>
-    
-    <div class="warning">
-      严禁分享：本视频内容受版权保护，严禁分享链接或录制视频内容。
-    </div>
-    
+    <div class="no-share-notice">⚠️ 根据平台规定，禁止分享或传播视频链接。视频仅限于本页面观看。</div>
+    <div id="videoContainer"></div>
+    <p id="privateVideoNote" style="color: #666; font-style: italic;">注意：这是一个私人视频，您需要授权才能查看。</p>
     <button onclick="logout()">退出登录</button>
   </div>
-  
   <script>
-    // Check if user is logged in
+    // Disable right-click
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    
+    // Disable keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Disable Ctrl+S, Ctrl+U, F12
+      if (
+        (e.ctrlKey && (e.keyCode === 83 || e.keyCode === 85)) || 
+        e.keyCode === 123
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
     if (!localStorage.getItem("loggedInToday")) {
       window.location.href = "index.html";
+    } else {
+      // Create the iframe with the video
+      const iframe = document.createElement("iframe");
+      iframe.width = "560";
+      iframe.height = "315";
+      
+      // Generate a unique session token to help prevent direct access
+      const sessionToken = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("videoSessionToken", sessionToken);
+      
+      // Append a random query parameter to make it harder to copy the link
+      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w?rel=0&modestbranding=1&session=" + sessionToken;
+      iframe.frameBorder = "0";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      iframe.onload = function() {
+        console.log("Video loaded");
+      };
+      iframe.onerror = function() {
+        document.getElementById("privateVideoNote").innerHTML += " <strong>无法加载视频。请确保您有权限观看此私人视频。</strong>";
+      };
+      document.getElementById("videoContainer").appendChild(iframe);
+      
+      // Add a transparent overlay to make it harder to right-click on the video
+      const overlay = document.createElement("div");
+      overlay.className = "video-overlay";
+      overlay.addEventListener("contextmenu", e => e.preventDefault());
+      document.getElementById("videoContainer").appendChild(overlay);
+      
+      // Check if this is a valid session
+      setInterval(function() {
+        if (localStorage.getItem("videoSessionToken") !== sessionToken) {
+          window.location.href = "index.html";
+        }
+      }, 5000);
     }
-    
-    // Try alternative embed
-    window.addEventListener('load', function() {
-      // Check if the first embed failed
-      const youtubeEmbed = document.getElementById('youtubeEmbed');
-      setTimeout(function() {
-        // Create alternative embed
-        const alternativeEmbed = document.getElementById('alternativeEmbed');
-        const embedCode = '<object width="560" height="315">' +
-                          '<param name="movie" value="https://www.youtube.com/v/LBNQlV3yk3w"></param>' +
-                          '<param name="allowFullScreen" value="true"></param>' +
-                          '<param name="allowscriptaccess" value="always"></param>' +
-                          '<embed src="https://www.youtube.com/v/LBNQlV3yk3w" ' +
-                          'type="application/x-shockwave-flash" ' +
-                          'width="560" height="315" ' +
-                          'allowscriptaccess="always" ' +
-                          'allowfullscreen="true"></embed>' +
-                          '</object>';
-        alternativeEmbed.innerHTML = embedCode;
-      }, 1000);
-    });
-    
+
     function logout() {
       localStorage.removeItem("loggedInToday");
+      localStorage.removeItem("videoSessionToken");
       window.location.href = "index.html";
     }
   </script>
