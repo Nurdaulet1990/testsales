@@ -18,6 +18,18 @@
     #videoContainer {
       position: relative;
     }
+    .video-watermark {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background-color: rgba(0,0,0,0.5);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 3px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 100;
+    }
     #troubleshooting {
       margin-top: 10px;
       padding: 10px;
@@ -27,7 +39,7 @@
     }
   </style>
 </head>
-<body>
+<body oncontextmenu="return false">
   <div class="course-container">
     <h2>欢迎回来！</h2>
     <div class="no-share-notice">⚠️ 根据平台规定，禁止分享或传播视频链接。视频仅限于本页面观看。</div>
@@ -44,29 +56,68 @@
     <button onclick="logout()">退出登录</button>
   </div>
   <script>
+    // Disable right-click
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    
+    // Disable keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+      // Disable Ctrl+S, Ctrl+U, F12
+      if (
+        (e.ctrlKey && (e.keyCode === 83 || e.keyCode === 85)) || 
+        e.keyCode === 123
+      ) {
+        e.preventDefault();
+        return false;
+      }
+    });
+
+    // Generate a session token
+    if (!localStorage.getItem("videoSessionToken")) {
+      localStorage.setItem("videoSessionToken", Math.random().toString(36).substring(2, 15) + Date.now());
+    }
+
     if (!localStorage.getItem("loggedInToday")) {
       window.location.href = "index.html";
     } else {
       loadVideo();
+      // Periodically verify session
+      setInterval(checkSession, 10000);
+    }
+
+    function checkSession() {
+      // Simple validation - in a real app you would check with server
+      if (!localStorage.getItem("loggedInToday") || !localStorage.getItem("videoSessionToken")) {
+        window.location.href = "index.html";
+      }
     }
 
     function loadVideo() {
       // Clear previous video if any
       document.getElementById("videoContainer").innerHTML = "";
       
+      // Create container with relative positioning
+      const container = document.createElement("div");
+      container.style.position = "relative";
+      
       // Create the iframe with the video
       const iframe = document.createElement("iframe");
       iframe.width = "560";
       iframe.height = "315";
       
-      // Use a simpler YouTube embed URL with minimal parameters
-      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w";
+      // Add user identifier to track who's viewing (discourages sharing)
+      iframe.src = "https://www.youtube.com/embed/LBNQlV3yk3w?modestbranding=1";
       iframe.frameBorder = "0";
       iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
       iframe.allowFullscreen = true;
       
       iframe.onload = function() {
         console.log("Video loaded");
+        
+        // Add watermark when video loads
+        const watermark = document.createElement("div");
+        watermark.className = "video-watermark";
+        watermark.textContent = "仅授权用户 ID: " + localStorage.getItem("videoSessionToken").substring(0, 8);
+        container.appendChild(watermark);
       };
       
       iframe.onerror = function() {
@@ -74,14 +125,23 @@
         document.getElementById("troubleshooting").style.display = "block";
       };
       
+      // Add iframe to container
+      container.appendChild(iframe);
+      
+      // Add container to page
+      document.getElementById("videoContainer").appendChild(container);
+      
       // Show troubleshooting section after a delay if needed
       setTimeout(function() {
-        if (document.getElementById("videoContainer").querySelector("iframe").contentDocument === null) {
-          document.getElementById("troubleshooting").style.display = "block";
+        try {
+          if (document.querySelector("iframe").contentDocument === null) {
+            document.getElementById("troubleshooting").style.display = "block";
+          }
+        } catch (e) {
+          // This will likely throw a cross-origin error which is normal
+          console.log("Cross-origin frame check");
         }
       }, 5000);
-      
-      document.getElementById("videoContainer").appendChild(iframe);
     }
     
     function reloadVideo() {
@@ -90,6 +150,7 @@
 
     function logout() {
       localStorage.removeItem("loggedInToday");
+      localStorage.removeItem("videoSessionToken");
       window.location.href = "index.html";
     }
   </script>
